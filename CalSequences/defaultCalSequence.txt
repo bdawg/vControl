@@ -1,0 +1,3 @@
+StepNo	PolaStage	DepolFlip	PolaAngle	HWPAngle	nFrames
+1	0		0		45		22.5		500
+

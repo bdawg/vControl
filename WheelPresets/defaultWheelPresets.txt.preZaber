@@ -1,0 +1,5 @@
+MaskNames: 7hole 9hole 9hole_D 18hole annulus NoMask
+nfilts: 1
+Filter		7hole 9hole 9hole_D 18hole annulus NoMask
+MaskOnly	110.5 170.4 200.29 260.1 290.0 140.0
+

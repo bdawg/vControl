@@ -1,0 +1,8 @@
+MaskNames: 9hole 18hole annulus NoMask
+nfilts: 4
+Filter	9hole	18hole	Annulus NoMask
+empty	99.888	114.95	107.68	130
+750	10.005	12.005	14.005	16
+800	20.005	22.005	24.005	26
+850	30.001	32.005	34.005	36
+

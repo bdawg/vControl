@@ -1,0 +1,12 @@
+mask number; description; Conex 2 rotation; Zaber 4 (left-right) step; Zaber 5 (up-down) step
+nmasks: 10
+1 EmptySlot 0 188000 121000
+2 7hole 24 188000 121000
+3 9hole 48 186000 118000
+4 18hole 73 190000 139000
+5 18holeNudged 97 189000 139000
+6 AnnulusNudged 119 188000 86500
+7 Mirror 143 187000 85500
+8 OldAnnulus 164 182800 11500
+9 EmptySlot2 191 187000 85500
+13 Annulus_Ref 283.2 179000 2000
