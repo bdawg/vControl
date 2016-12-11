@@ -1758,13 +1758,12 @@ end
 
 
 % Check that all acqusitions have completed (i.e. camera is idle)
-
-for k = 1:length(camHandles)
-    status = 0;
-    curCamHandle = camHandles(k);
-    error=calllib('libandor','SetCurrentCamera',curCamHandle);
-    statptr=libpointer('int32Ptr',0);
-    if getappdata(handles.vCamGui,'abortStatus') == 0
+if getappdata(handles.vCamGui,'abortStatus') == 0
+    for k = 1:length(camHandles)
+        status = 0;
+        curCamHandle = camHandles(k);
+        error=calllib('libandor','SetCurrentCamera',curCamHandle);
+        statptr=libpointer('int32Ptr',0);
         while status ~= 20073
             error=calllib('libandor','GetStatus',statptr);
             %k
@@ -1772,12 +1771,11 @@ for k = 1:length(camHandles)
             pause(0.1)
         end
         disp(['Acqusition complete for camera ' num2str(k)])
+
+        %error=calllib('libandor','SetSpool',0,5,'fitsspoolfile',10);
+        error=calllib('libandor','SetAcquisitionMode',5);
     end
-
-    %error=calllib('libandor','SetSpool',0,5,'fitsspoolfile',10);
-    error=calllib('libandor','SetAcquisitionMode',5);
 end
-
 
 
 disp(['allCounts: ' num2str(allCounts)])

@@ -405,7 +405,6 @@ end
 
 setappdata(handles.vCamGui,'imWidth',imWidth)
 setappdata(handles.vCamGui,'imHeight',imHeight)
-setappdata(handles.vCamGui,'allCounts',zeros(1,numCams))
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Create timer object for video
@@ -633,7 +632,6 @@ if tcOn == 1
     fprintf(tcObj,'tact?'); 
 end
 pause(0.2)
-
 start(handles.valTimer)
 
 % Update handles structure
@@ -962,15 +960,6 @@ output=fscanf(conex3Obj);
 output=strrep(output,'1TP','');
 polaAngle=str2num(output) - getappdata(handles.vCamGui,'polaCalOffset');
 set(handles.polaAngleDisp,'string',num2str(polaAngle))
-
-% % Acqusition status
-% allCounts = getappdata(handles.vCamGui,'allCounts');
-% if allCounts(1) > 0
-%     statString = ['Acquiring data - ' num2str(allCounts) ...
-%         ' frames acquired per camera'];
-%     set(handles.textStatusBox,'string',statString)
-% end
-
 
 
 function log_values(hObject,eventdata,hfigure)
@@ -1470,37 +1459,27 @@ function acquireCubeBtn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-statUpdatePeriod = 1; %Update status period, in seconds
-
 nLoops=str2num(get(handles.loopBox,'String'));
 camHandles=getappdata(handles.vCamGui,'camHandles');
 logging(strcat('Acquisition cube starting, loops:',32,num2str(nLoops)))
-
-% For development - spool (1) or save to an array then save to fits (2)?
-savemode = 2
 
 % %%%% HACK - only do first camera (TODO)
 % camHandles = camHandles(1);
 %error=calllib('libandor','SetCurrentCamera',camHandles(1)); 
 
-% Stop video if necessary
-wasRunning = 0;
-if strcmp(get(handles.vidTimer, 'Running'), 'on')
-    stop(handles.vidTimer)
-    calllib('libandor','AbortAcquisition');
-    set(handles.textStatusBox,'string','Idle')
-    wasRunning = 1;
-end
-stop(handles.valTimer)
-
+% % Stop video if necessary
+% wasRunning = 0;
+% if strcmp(get(handles.vidTimer, 'Running'), 'on')
+%     stop(handles.vidTimer)
+%     calllib('libandor','AbortAcquisition');
+%     set(handles.textStatusBox,'string','Idle')
+%     wasRunning = 1;
+% end
 
 % focPosns1 = [0, 100, 200, 300, 400, 500]*1e3;
 % focLoops = nLoops/length(focPosns1);
 % focPosns = repmat(focPosns1, 1, focLoops);
 
-switch savemode
-    case 1
-numCams = length(camHandles);
 for loops = 1:nLoops
 
     
@@ -1536,19 +1515,17 @@ for k = 1:length(camHandles)
     curFilename = [filename '_cam' num2str(k)];
 
     % Perform Kinetic Series acquisition, spool to file
-    %error=calllib('libandor','SetCurrentCamera',curCamHandle); 
+    error=calllib('libandor','SetCurrentCamera',curCamHandle); 
     error=calllib('libandor','SetAcquisitionMode',3);
-    %error=calllib('libandor','SetCurrentCamera',curCamHandle); 
+    error=calllib('libandor','SetCurrentCamera',curCamHandle); 
     error=calllib('libandor','SetSpool',1,5,curFilename,10);
 
     numFrames=getappdata(handles.vCamGui,'numKinetics');
-    %error=calllib('libandor','SetCurrentCamera',curCamHandle); 
+    error=calllib('libandor','SetCurrentCamera',curCamHandle); 
     calllib('libandor','SetNumberKinetics',numFrames);
 
-    %error=calllib('libandor','SetCurrentCamera',curCamHandle); 
-    error=calllib('libandor','StartAcquisition');  
-    
-    pause(0.005)
+    error=calllib('libandor','SetCurrentCamera',curCamHandle); 
+    error=calllib('libandor','StartAcquisition');    
 end
 
 
@@ -1560,22 +1537,17 @@ status = 20072; %Initialise with state 'DRV_ACQUIRING'
 while status == 20072
     % It seems you need to do SetCurrentCamera each iteration, or it
     % forgets...?
-    %error=calllib('libandor','SetCurrentCamera',camHandles(1));
+    error=calllib('libandor','SetCurrentCamera',camHandles(1));
     
-    for k = 1:length(camHandles)
-        curCamHandle = camHandles(k);
-        error=calllib('libandor','SetCurrentCamera',curCamHandle); 
-    
-        error=calllib('libandor','GetStatus',statptr);
-        status=statptr.value;
+    error=calllib('libandor','GetStatus',statptr);
+    status=statptr.value;
 
-        error=calllib('libandor','GetTotalNumberImagesAcquired',imsacqptr);
-        imsacq = imsacqptr.value;
-        if k == 1
-            statString=['Acquiring single cube - ' num2str(imsacq) ...
-                ' images acquired.'];
-            set(handles.textStatusBox,'string',statString)
-        end
+    error=calllib('libandor','GetTotalNumberImagesAcquired',imsacqptr);
+    imsacq = imsacqptr.value;
+    statString=['Acquiring single cube - ' num2str(imsacq) ...
+         ' images acquired.'];
+    set(handles.textStatusBox,'string',statString)
+
 %     if getappdata(handles.vCamGui,'abortStatus') == 1
 %         disp('Aborting!')
 %         status = 0;
@@ -1586,12 +1558,8 @@ while status == 20072
 %         end
 %         setappdata(handles.vCamGui,'abortStatus',0)
 %     end
-    
-    pause(0.005)
-    end
-    
 
-    %pause(0.1)
+    pause(0.1)
 end
 disp('Exited while loop')
 
@@ -1601,12 +1569,12 @@ for k = 1:length(camHandles)
     curCamHandle = camHandles(k);
     error=calllib('libandor','SetCurrentCamera',curCamHandle);
     statptr=libpointer('int32Ptr',0);
-     while status ~= 20073
+%     while status ~= 20073
         error=calllib('libandor','GetStatus',statptr);
         k
         status=statptr.value
         pause(0.1)
-     end
+%     end
     disp(['Acqusition complete for camera ' num2str(k)])
     
     error=calllib('libandor','SetSpool',0,5,'fitsspoolfile',10);
@@ -1616,205 +1584,15 @@ end
 set(handles.textStatusBox,'string','Idle')
 logging('Acquisition 1 cube finished')
 
-
-
 pause(0.1)
 end
 
-
-    case 2
-% Save to memory
-for loops = 1:nLoops
-
-    
-%     %%%%%%%%%%%%%%% Take focus frames %%%%%%%%%%%%
-%     moveZabersAbs(handles,3,focPosns(loops));
-%     if focPosns(loops) == focPosns1(1)
-%         pause(25)
-%     else
-%         pause(5)
-%     end
-%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-
-% Set the filename
-FWNames=get(handles.filterWheelMenu,'string');
-maskNames=get(handles.maskNameMenu,'string');
-filename=[getappdata(handles.vCamGui,'savefolder') ...
-    get(handles.fileNameBox,'String') '_' FWNames{get(handles.filterWheelMenu,'Value')}...
-    '_' maskNames{get(handles.maskNameMenu,'Value')} '_'];
-incr=0;
-while 1
-    if exist(strcat(filename,num2str(incr),'_cam1.fits')) == 0
-        break
-    end
-    incr = incr + 1;
-end
-filename = strcat(filename,num2str(incr));
-
-imWidth=getappdata(handles.vCamGui,'imWidth');
-imHeight=getappdata(handles.vCamGui,'imHeight');
-numFrames=getappdata(handles.vCamGui,'numKinetics');
-numCams = length(camHandles);
-statptr=libpointer('int32Ptr',0);
-
-% For debug:
-getCamptr=libpointer('int32Ptr',0);
-allGetCams = zeros(2, numFrames, 'int32');
-
-
-% Set-up and start the acquisition
-for k = 1:numCams
-    curCamHandle = camHandles(k);
-    error=calllib('libandor','SetCurrentCamera',curCamHandle); 
-    error=calllib('libandor','GetStatus',statptr);
-    statptr.value
-        
-    curFilename{k} = [filename '_cam' num2str(k)];
-
-    % Perform Kinetic Series acquisition, spool to file
-    error=calllib('libandor','SetAcquisitionMode',3);
-    
-    % Don't spool
-    %error=calllib('libandor','SetSpool',1,5,curFilename,10);
-    error=calllib('libandor','SetSpool',0,5,'fitsspoolfile',10);
-
-    calllib('libandor','SetNumberKinetics',numFrames);
-
-    error=calllib('libandor','SetCurrentCamera',curCamHandle); 
-    error=calllib('libandor','StartAcquisition');    
-end
-
-allStatuses = ones(1, numCams) * 20072; %Initialise with state 'DRV_ACQUIRING'
-allAcquringStatus = allStatuses;
-%allIdleStatus = ones(1, numCams) * 20073; %This is 'idle' status
-
-% Note - when there are  no more images in buffer, GetOldestImage will
-% return DRV_NO_NEW_DATA (20024)
-allGetimErr = ones(1, numCams) * 20002; %Initialise with state 'DRV_SUCCESS'
-allGetimSuccess = allGetimErr;
-allCounts = ones(1, numCams);
-allImages = zeros(imWidth, imHeight, numFrames, numCams, 'int32');
-nPixels = imWidth*imHeight;
-imPtr = libpointer('int32Ptr',zeros(imWidth,imHeight));
-
-statString = ['Acquiring data - ' num2str(allCounts) ...
-    ' frames acquired per camera'];
-set(handles.textStatusBox,'string',statString)
-lastStatUpdate = tic;
-
-% Loop until all images have been retrieved and acquisition has finished
-while any(allStatuses == allAcquringStatus) || ...
-        any(allGetimErr == allGetimSuccess)
-    
-    for k = 1:numCams
-        curCamHandle = camHandles(k);
-        error=calllib('libandor','SetCurrentCamera',curCamHandle); 
-        if error ~= 20002
-            disp(error)
-        end
-        error=calllib('libandor','GetStatus',statptr);
-        allStatuses(k)=statptr.value;
-        error=calllib('libandor','SetCurrentCamera',curCamHandle); 
-        if error ~= 20002
-            disp(error)
-        end
-        allGetimErr(k)=calllib('libandor','GetOldestImage',imPtr,nPixels);
-        
-        % Add image to array if new one was retrieved
-        if allGetimErr(k) == 20002
-            allImages(:, :, allCounts(k), k) = imPtr.value;
-            allCounts(k) = allCounts(k) + 1;
-            %disp(allCounts) % TODO for debug
-            setappdata(handles.vCamGui,'allCounts',allCounts)
-        end
-        
-        % For debug:
-        error=calllib('libandor','GetCurrentCamera',getCamptr);
-        allGetCams(k, allCounts(k)) = getCamptr.value;
-        
-        if toc(lastStatUpdate) > statUpdatePeriod
-            statString = ['Acquiring data - ' num2str(allCounts) ...
-                ' frames acquired per camera'];
-            set(handles.textStatusBox,'string',statString)
-            lastStatUpdate = tic;
-            drawnow
-        end      
-        % pause(0.001)    
-    end
-    
-    if getappdata(handles.vCamGui,'abortStatus') == 1
-        disp('Aborting!')
-        for kk = 1:length(camHandles)
-            curCamHandle = camHandles(kk);
-            error=calllib('libandor','SetCurrentCamera',curCamHandle);
-            error=calllib('libandor','AbortAcquisition');
-            pause(0.1)
-        end
-        break
-    end
-    
-end
-
-
-% Check that all acqusitions have completed (i.e. camera is idle)
-
-for k = 1:length(camHandles)
-    status = 0;
-    curCamHandle = camHandles(k);
-    error=calllib('libandor','SetCurrentCamera',curCamHandle);
-    statptr=libpointer('int32Ptr',0);
-    if getappdata(handles.vCamGui,'abortStatus') == 0
-        while status ~= 20073
-            error=calllib('libandor','GetStatus',statptr);
-            %k
-            status=statptr.value;
-            pause(0.1)
-        end
-        disp(['Acqusition complete for camera ' num2str(k)])
-    end
-
-    %error=calllib('libandor','SetSpool',0,5,'fitsspoolfile',10);
-    error=calllib('libandor','SetAcquisitionMode',5);
-end
-
-
-
-disp(['allCounts: ' num2str(allCounts)])
-okCounts = all(allCounts == [201, 201]);
-disp('')
-
-tic
-for k = 1:length(camHandles)
-    disp(['Writing to file ' curFilename{k}])
-    % NOTE - this is uisng fitswrite2, a modified version of fitswrite
-    % which allows uint16 (via an offset) and header keywords.
-    fitswrite2(allImages(:,:,:,k), curFilename{k}, 'uint16', true)
-    %fitswrite(allImages(:,:,:,k), curFilename{k})
-end
-toc
-
-set(handles.textStatusBox,'string','Idle')
-logging('Acquisition 1 cube finished')
-
-if getappdata(handles.vCamGui,'abortStatus') == 1
-    setappdata(handles.vCamGui,'abortStatus',0)
-    break
-end
-
-end
-
-end
-
-setappdata(handles.vCamGui,'allCounts',zeros(1,numCams))
-
-%Go back to live video if necessary
-if wasRunning == 1
-    start(handles.vidTimer)
-    set(handles.textStatusBox,'string','Displaying live video')
-    calllib('libandor','StartAcquisition');
-end
-start(handles.valTimer)
+% %Go back to live video if necessary
+% if wasRunning == 1
+%     start(handles.vidTimer)
+%     set(handles.textStatusBox,'string','Displaying live video')
+%     calllib('libandor','StartAcquisition');
+% end
 
 
 function fileNameBox_Callback(hObject, eventdata, handles)
